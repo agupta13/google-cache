@@ -63,6 +63,7 @@ class MeasurementBase(object):
         headers =  {'content-type': 'application/json', 'accept': 'application/json'}
     
         response = self.sess.post('https://atlas.ripe.net/api/v1/measurement/?key='+key, data_str, headers=headers)
+        print type(response)
         response_str = response.text
 
         return json.loads(response_str)
