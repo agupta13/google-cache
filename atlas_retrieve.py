@@ -272,7 +272,10 @@ def parse_traceroute_results(json_results):
         hop_list = [str(x[1][0])+','+str(x[1][1])+','+str(x[1][2]) for x in hop_list]
         hops_str = '|'.join(hop_list)
         
-        print('%s %s %s' % (probe_id, target, hops_str))
+        result = ('%s %s %s' % (probe_id, target, hops_str))
+        
+        print result
+        return result
 
 if __name__ == '__main__':
     

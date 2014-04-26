@@ -21,6 +21,7 @@ import logging.config
 import requests
 import time
 import traceback
+import measure_baseclass as MeasureBaseclass
 
 ACTIVE_PROBES_URL = 'https://atlas.ripe.net/api/v1/probe/?limit=10000&format=txt'
 ACTIVE_FILE = 'atlas-active-%d-%d-%d-%d-%d-%d'
@@ -87,6 +88,7 @@ class TracerouteService(object):
         self.sess.mount('https://', adapter)
 
     def submit(self, probe_list, target, user_key=None):
+        print "submit called"
         try:
             self.logger.info('Got submit request for target %s with %s probes supplied key: %s' % (target, str(probe_list), str(user_key)))
 
@@ -95,7 +97,7 @@ class TracerouteService(object):
             tr = atlas_traceroute.Traceroute(target, key, sess=self.sess)
             tr.num_probes = len(probe_list)
             tr.probe_type = 'probes'
-            tr.probe_value = atlas_traceroute.setup_probe_value('probes', probe_list)
+            tr.probe_value = MeasureBaseclass.setup_probe_value('probes', probe_list)
 
             response = tr.run()
             self.logger.info('Atlas response %s' % (str(response)))

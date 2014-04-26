@@ -128,9 +128,9 @@ if __name__ == '__main__':
         fetch_single_failure(server)
         fetch_ases(server)
         fetch_active(server)
-        submit_failure(server)
+        #submit_failure(server)
         fetch_mpls_and_host_unreachable(server)
-        submit_withkey(server, key)
+        #submit_withkey(server, key)
 
     finally:
         print('Killing service')
