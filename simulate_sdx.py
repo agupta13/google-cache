@@ -16,8 +16,8 @@ import itertools
 from geopy import geocoders 
 from geopy import distance
 
-import proxyIXPClustering as pxyixp
-import pdbParser as pdbParser
+#import proxyIXPClustering as pxyixp
+#import pdbParser as pdbParser
 #import closest_IXP as closest
 
 dbFile = 'peeringdb_dump_2014_04_28.sqlite'
@@ -419,16 +419,17 @@ def get_pfx2proxy_nearest():
             # distance from proxy to IXP
             distance1 = int(chunks[2])
             policy = chunks[1].lower()
-            print " processing for IXP: ", k2, ixp2proxy_nearest[k2], distance1
-            if policy == 'open':
-                # Get distance from IXP to proxy
-                distance_open = int(ixp2proxy_nearest[k2][0])
-                
-                if distance_open >= 0:                    
-                    tmp1.append(distance1 + distance_open)
-            distance_sdx = int(ixp2proxy_nearest[k2][1])
-            if distance_sdx >= 0:
-                tmp2.append(distance1 + distance_sdx)
+            if k2 in ixp2proxy_nearest:
+                print " processing for IXP: ", k2, ixp2proxy_nearest[k2], distance1
+                if policy == 'open':
+                    # Get distance from IXP to proxy
+                    distance_open = int(ixp2proxy_nearest[k2][0])
+                    
+                    if distance_open >= 0:                    
+                        tmp1.append(distance1 + distance_open)
+                distance_sdx = int(ixp2proxy_nearest[k2][1])
+                if distance_sdx >= 0:
+                    tmp2.append(distance1 + distance_sdx)
         
         tmp1.sort()
         tmp2.sort()
