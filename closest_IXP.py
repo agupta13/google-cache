@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import sys
+import json
 import multiprocessing
 from multiprocessing import Pool
 import numpy as np
@@ -15,19 +16,26 @@ haystack = None
 values = None
 ixp2locationFile = 'ixp2location.txt'
 pfx2locationFile = 'prefix_lat_lon_country_asn_2014_04_14.txt'
+ixp2eyeballsFile = 'ixp2eyeballs.txt'
+ixp2participantsFile = 'ixp2participants.txt'
+provider2custumerFile = '20131101.ppdc-ases.txt'
+ixp2customersFile = 'ixp2customers.dat'
+pfx2ixpFile = 'pfx2ixp.dat'
 
 num_process = 6
 loc2ixp = {}
 loc2pfx = {}
 ixp2eyeballs = {}
+ixp2customers = {}
 
 def dist_vector(needle, haystack):
     """
     Calculate the distance from needle to all points in haystack
     """
+    
     lats = [float(x[0]) for x in haystack]
     lons = [float(x[1]) for x in haystack]
-    #print lats, [needle[0]]
+
     
     #needle[0] = float(needle[0])
     #needle[1] = float(needle[1])
@@ -42,36 +50,49 @@ def dist_vector(needle, haystack):
 
 def closest(needle, haystack, values):
     d = dist_vector(needle, haystack)
-    i = np.argmin(d)          #index of minimum distance
-    return (values[i], d[i])  #return tuple with distance and matching ip
+    #i = np.argmin(d)          #index of minimum distance
+    ixp2distance = {}
+    i = 0
+    for elem in d:
+        if elem <= 500:
+            for ixp in values[i]:
+                ixp_id = ixp[0]
+                ixp_name = ixp[1]
+                k = ','.join([ixp_id,ixp_name])
+                ixp2distance[k] =  int(elem)
+        i +=1
+    
+    return ixp2distance
+    #return (values[i], d[i])  #return tuple with distance and matching ip
 
 def log_result(result):
+    #print result
+    #results = dict(results.items() + result.items())
     results.append(result)
     sys.stderr.write('results: %d\n' % len(results))
     sys.stderr.flush()
+    
 
 def process(needle_list, prefix_list):
 
     try:
-        distances = list()
+        
+        pfx2ixp_tmp = {}
         
         #for needle in needle_list:
         for i in range(0, len(needle_list)):
             needle = needle_list[i]
-            prefix = prefix_list[i]
-
-            dist = closest(needle, haystack, values)
-            #print type(dist[0])
-            #print prefix
-            str = ''+','.join(list(needle))+'|'
-            for elem in dist[0]:
-                str += ','.join(list(elem)) 
-                str += ',' + '%.0f' % dist[1]
-                #str += ','+str(float(dist[1])
-                str += '|'
-
-            distances.append(str)
-        return distances
+            prefixes = prefix_list[i]
+            
+            ixp2distance = closest(needle, haystack, values)
+            if ixp2distance != {}:
+                for prefix in prefixes: 
+                    k = ','.join([prefix[0],prefix[4]])                 
+                    pfx2ixp_tmp[k] = ixp2distance
+                    
+        #print "temp: ", pfx2ixp_tmp
+        return [pfx2ixp_tmp]
+    
     except:
         traceback.print_exc(file=sys.stderr)
         sys.stderr.flush()
@@ -83,6 +104,13 @@ def split(l, n):
         yield l[i:i+n]
 
 
+def combine_result(l):
+    out = {}
+    for elem in l:
+        out = dict(elem.items() + out.items())
+    return out
+
+
 def unique_ixpLocation():
     with open(ixp2locationFile) as f:
         count = 0
@@ -92,8 +120,8 @@ def unique_ixpLocation():
             if chunks[2] not in loc2ixp:
                 loc2ixp[chunks[2]] = []
             loc2ixp[chunks[2]].append((chunks[0], chunks[1]))
-            #if count == 10:
-            #    break
+            if count == 10:
+                break
     print count, len(loc2ixp.keys())
     #print loc2ixp
 
@@ -109,8 +137,8 @@ def unique_prefixes():
             if loc not in loc2pfx:
                 loc2pfx[loc] = []
             loc2pfx[loc].append(tuple(chunks))
-            #if count==1000:
-            #    break
+            if count==1000:
+                break
     print count, len(loc2pfx.keys())
     #print loc2pfx
     
@@ -142,7 +170,7 @@ def update_ixp2eyeballs(pfx_location2ixp):
         
         
 def store_ixp2eyeballs():
-    fout = open('ixp2eyeballs.txt','w')
+    fout = open(ixp2eyeballsFile,'w')
     for (ixp_id,ixp_name) in ixp2eyeballs:
         line = ''+ixp_id+','+ixp_name
         for k,v in ixp2eyeballs[(ixp_id,ixp_name)].iteritems():
@@ -152,7 +180,55 @@ def store_ixp2eyeballs():
     fout.close()
                
 
+def verify_ixp2eyeballs():
+    count = 0
+    with open(ixp2eyeballsFile) as f:
+        for line in f:
+            chunks = line.split('|')
+            for chunk in chunks[1:]:
+                n = chunk.split(',')[1]
+                if '}' not in n:
+                    print n
+                    count += int(n)
+    print count
+
+
+def get_provide2customer():
+    provide2customer = {}
+    with open(provider2custumerFile) as f:
+        for line in f:
+            line = line.strip()
+            chunks = line.split()
+            provide2customer[chunks[0]] = chunks[1:]    
+    return provide2customer          
+
+def get_ixp2customers():
+    provide2customer = get_provide2customer()
+    with open(ixp2participantsFile) as f:
+        for line in f:
+            chunks = line.strip().split('|')
+            #[ixp_id, ixp_name] = chunks[:2]
+            key = ','.join(chunks[:2])
+            ixp2customers [key] = {}
+            for elem in chunks[2:]:
+                if elem not in ixp2customers [key]:
+                    ixp2customers [key][elem] = []
+                if elem in provide2customer:
+                    customers = provide2customer[elem]
+                    ixp2customers [key][elem] = customers
+    
+    with open(ixp2customersFile, 'w') as outfile:
+        json.dump(ixp2customers, outfile, ensure_ascii=True, encoding="ascii")
+                
+            
+            
+            
+        
+    
 if __name__ == '__main__':
+    #verify_ixp2eyeballs()
+    get_ixp2customers()
+    
     unique_ixpLocation()
     unique_prefixes()
     
@@ -176,11 +252,8 @@ if __name__ == '__main__':
         [lat, lon] = prefix_loc.split(',')
         needles.append((lat,lon))
         prefixes.append(loc2pfx[prefix_loc])
-        
-    """
-    create a list of lists of clients. each sub-list has 6000 clients. Each
-    sub-list gets processed by one running process. 
-    """
+
+    
     needle_lists = list(split(needles, 60)) #convert generator into list
     prefix_lists = list(split(prefixes, 60)) 
     
@@ -198,13 +271,20 @@ if __name__ == '__main__':
     #print results
 
     #merge list of lists into one list
-    pfx_location2ixp = list(itertools.chain(*results))
-    update_ixp2eyeballs(pfx_location2ixp)
-    store_ixp2eyeballs()
+    pfx2ixp = combine_result(list(itertools.chain(*results)))
+    with open(pfx2ixpFile, 'w') as outfile:
+        json.dump(pfx2ixp, outfile, ensure_ascii=True, encoding="ascii")
+    
+    
+    #update_ixp2eyeballs(pfx_location2ixp)
+    #store_ixp2eyeballs()
     
     #distances_str = map(str, distances)
-    out = '\n'.join(pfx_location2ixp)
-    #print(out)
-    #print ixp2eyeballs
+    #out = '\n'.join(pfx_location2ixp)
+    #print (pfx_location2ixp)
+    #print type(pfx2ixp)
+
     
+
+        
     
