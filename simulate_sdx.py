@@ -17,6 +17,17 @@ from geopy import geocoders
 from geopy import distance
 from statistics import *
 
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from scipy.stats import cumfreq
+import pylab as pl
+import numpy as np
+from statistics import *
+from matplotlib.ticker import MaxNLocator
+my_locator = MaxNLocator(6)
+
 #import proxyIXPClustering as pxyixp
 #import pdbParser as pdbParser
 #import closest_IXP as closest
@@ -38,6 +49,7 @@ pfx2ixpFile = 'pfx2ixp.dat'
 pfx2ixp_updatedFile = 'pfx2ixp_updated.dat'
 ixp2proxy_nearestFile = 'ixp2proxy_nearest.dat'
 pfx2proxy_nearestFile = 'pfx2proxy_nearest.dat'
+pfx2proxy_distancesFile = 'pfx2proxy_distances.dat'
 
 
 distanceThreshold = 500 # km
@@ -454,7 +466,52 @@ def get_pfx2proxy_nearest():
     with open(pfx2proxy_nearestFile, 'w') as outfile:
         json.dump(pfx2proxy_nearest, outfile, ensure_ascii=True, encoding="ascii")
                
-                
+
+def get_cdf(elem):
+    num_bins=10000
+    counts, bin_edges = np.histogram(raw[key],bins=num_bins,normed=True)
+    print bin_edges
+    cdf=np.cumsum(counts)
+    scale = 1.0/cdf[-1]
+    cdf=cdf*scale
+    return bin_edges[1:], cdf
+
+
+def plot_pfx2proxy():
+    
+    pfx2proxy_distances = json.load(open(pfx2proxy_distancesFile,'r'))
+    data = pfx2proxy_distances.values()
+    legends = pfx2proxy_distances.keys()
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    color_n=['g','r','b','m','c','k','w']
+    markers=['o','*','^','s','d','3','d','o','*','^','1','4']
+    linestyles=[ '--',':','-','-.']
+    
+    i =0
+    plots = []
+    for elem in data:
+        x, y = get_cdf(elem)
+        plots.append(pl.plot(x,y,label=legends[i],color=color_n[i],linestyle=linestyles[i]))
+        i += 1
+    
+    pl.legend(plots,legends,'lower right')
+    pl.xlabel('Distance (km)')
+
+    pl.ylabel('CDF')
+    ax.set_ylim(ymin=0.01)
+        
+    ax.grid(True)
+    plt.tight_layout()
+    plot_name='pfx2proxy'+'.eps'
+    plot_name_png='pfx2proxy'+'.png'
+    pl.savefig(plot_name)
+    pl.savefig(plot_name_png)
+            
+    
+                    
+
+
 def process_pfx2proxy_nearest():
     pfx2proxy_nearest = json.load(open(pfx2proxy_nearestFile,'r'))
     distances_open = []
@@ -472,6 +529,12 @@ def process_pfx2proxy_nearest():
                                                                                      confidence_interval=0.05)
     
     print "# of prefixes crossing IXP with existing SDX policies:  ", len(distances_sdx), "median: ", median 
+    pfx2proxy_distances = {}
+    pfx2proxy_distances['SDX-SDX'] = distances_sdx
+    pfx2proxy_distances['Open-Open'] = distances_open
+    
+    with open(pfx2proxy_distancesFile, 'w') as outfile:
+        json.dump(pfx2proxy_distances, outfile, ensure_ascii=True, encoding="ascii")
     
         
         
@@ -484,6 +547,7 @@ def simulate_sdx():
     #get_ixp2proxy_nearest()
     #get_pfx2proxy_nearest()
     process_pfx2proxy_nearest()
+    plot_pfx2proxy()
     
     
 
