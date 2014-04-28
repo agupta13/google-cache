@@ -35,6 +35,8 @@ pfx2locationFile = 'prefix_lat_lon_country_asn_2014_04_14.txt'
 ixp2customersFile = 'ixp2customers.dat'
 pfx2ixpFile = 'pfx2ixp.dat'
 pfx2ixp_updatedFile = 'pfx2ixp_updated.dat'
+ixp2proxy_nearestFile = 'ixp2proxy_nearest.dat'
+pfx2proxy_nearestFile = 'pfx2proxy_nearest.dat'
 
 
 distanceThreshold = 500 # km
@@ -363,20 +365,102 @@ def update_pfx2ixp():
             if asn != '':
                 # Consider only the cases where we had a match
                 pfx2ixp_updated[prefix_info][ixp_info] = ','.join([asn, policy, distance])
-                
-            #pfx2ixp[prefix_info][ixp_info] = ','.join([asn, policy, distance])
-    #print pfx2ixp_updated
+        if pfx2ixp_updated[prefix_info] == {}:
+            pfx2ixp_updated.pop(prefix_info,None)
+    print len(pfx2ixp_updated.keys())
     with open(pfx2ixp_updatedFile, 'w') as outfile:
         json.dump(pfx2ixp_updated, outfile, ensure_ascii=True, encoding="ascii")
                         
+
+def get_ixp2proxy_nearest():
+    ixp2proxy_updated = json.load(open(ixp2proxy_updatedFile,'r'))
+    ixp2proxy_nearest = {}        
+    for k1,v1 in ixp2proxy_updated.iteritems():
+        
+        tmp1 = [] # distances to proxies with "open" policies
+        tmp2 = [] # distances to all other connected proxies
+        for k2,v2 in v1.iteritems():
+            distance = int(v2[0])
+            policy = v2[1].lower()
+            if policy != 'not-connected':
+                tmp2.append(distance)
+                if policy == "open":
+                    tmp1.append(distance)
+        tmp1.sort()
+        tmp2.sort()
+        
+        if len(tmp1) > 0:
+            min_open = tmp1[0]
+        else:
+            min_open = -1
+        if len(tmp2) > 0:
+            min_sdx = tmp2[0]
+        else:
+            min_sdx = -1
+        
+        ixp2proxy_nearest[k1] = [min_open, min_sdx]
     
+    print ixp2proxy_nearest
+    
+    with open(ixp2proxy_nearestFile, 'w') as outfile:
+        json.dump(ixp2proxy_nearest, outfile, ensure_ascii=True, encoding="ascii")
+        
+        
+def get_pfx2proxy_nearest():
+    ixp2proxy_nearest = json.load(open(ixp2proxy_nearestFile,'r'))
+    pfx2ixp_updated = json.load(open(pfx2ixp_updatedFile,'r')) 
+    pfx2proxy_nearest = {}
+    for k1, v1 in  pfx2ixp_updated.iteritems():
+        tmp1 = []
+        tmp2 = []
+        print "processing for the pfx: ",k1
+        for k2, v2 in v1.iteritems():
+            chunks = v2.split(',')
+            # distance from proxy to IXP
+            distance1 = int(chunks[2])
+            policy = chunks[1].lower()
+            print " processing for IXP: ", k2, ixp2proxy_nearest[k2], distance1
+            if policy == 'open':
+                # Get distance from IXP to proxy
+                distance_open = int(ixp2proxy_nearest[k2][0])
                 
+                if distance_open >= 0:                    
+                    tmp1.append(distance1 + distance_open)
+            distance_sdx = int(ixp2proxy_nearest[k2][1])
+            if distance_sdx >= 0:
+                tmp2.append(distance1 + distance_sdx)
+        
+        tmp1.sort()
+        tmp2.sort()
+        #print tmp1, tmp2
+        
+        if len(tmp1) > 0:
+            min_open = tmp1[0]
+        else:
+            min_open = -1
+            
+        if len(tmp2) > 0:
+            min_sdx = tmp2[0]
+        else:
+            min_sdx = -1
+        
+        pfx2proxy_nearest[k1] = [min_open, min_sdx]
+        #print pfx2proxy_nearest[k1]
+    
+    print pfx2proxy_nearest
+    
+    with open(pfx2proxy_nearestFile, 'w') as outfile:
+        json.dump(pfx2proxy_nearest, outfile, ensure_ascii=True, encoding="ascii")
+               
                 
     
 def simulate_sdx():
     #get_ixp2proxy()
     #filter_ixp2proxy()
-    update_pfx2ixp()
+    #update_pfx2ixp()
+    #get_ixp2proxy_nearest()
+    get_pfx2proxy_nearest()
+    
     
 
     
