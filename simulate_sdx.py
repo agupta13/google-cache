@@ -413,14 +413,14 @@ def get_pfx2proxy_nearest():
     for k1, v1 in  pfx2ixp_updated.iteritems():
         tmp1 = []
         tmp2 = []
-        print "processing for the pfx: ",k1
+        #print "processing for the pfx: ",k1
         for k2, v2 in v1.iteritems():
             chunks = v2.split(',')
             # distance from proxy to IXP
             distance1 = int(chunks[2])
             policy = chunks[1].lower()
             if k2 in ixp2proxy_nearest:
-                print " processing for IXP: ", k2, ixp2proxy_nearest[k2], distance1
+                #print " processing for IXP: ", k2, ixp2proxy_nearest[k2], distance1
                 if policy == 'open':
                     # Get distance from IXP to proxy
                     distance_open = int(ixp2proxy_nearest[k2][0])
