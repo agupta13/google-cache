@@ -15,6 +15,7 @@ import itertools
 
 from geopy import geocoders 
 from geopy import distance
+from statistics import *
 
 #import proxyIXPClustering as pxyixp
 #import pdbParser as pdbParser
@@ -454,13 +455,35 @@ def get_pfx2proxy_nearest():
         json.dump(pfx2proxy_nearest, outfile, ensure_ascii=True, encoding="ascii")
                
                 
+def process_pfx2proxy_nearest():
+    pfx2proxy_nearest = json.load(open(pfx2proxy_nearestFile,'r'))
+    distances_open = []
+    distances_sdx = []
+    for k, v in pfx2proxy_nearest.iteritems():
+        distances_open.append(int(v[0]))
+        distances_sdx.append(int(v[1]))
+    print "# of prefixes into consideration: ", len(distances_sdx)
+    distances_open = filter(lambda x: x >=0, distances_open)
+    total, average, median, standard_deviation, minimum, maximum, confidence = stats(distances_open, 
+                                                                                     confidence_interval=0.05)
+    print "# of prefixes crossing IXP with existing OPEN policies: ", len(distances_open), "median: ", median 
+    distances_sdx = filter(lambda x: x >=0, distances_sdx)
+    total, average, median, standard_deviation, minimum, maximum, confidence = stats(distances_sdx, 
+                                                                                     confidence_interval=0.05)
     
+    print "# of prefixes crossing IXP with existing SDX policies:  ", len(distances_sdx), "median: ", median 
+    
+        
+        
+    
+        
 def simulate_sdx():
     #get_ixp2proxy()
     #filter_ixp2proxy()
     #update_pfx2ixp()
     #get_ixp2proxy_nearest()
-    get_pfx2proxy_nearest()
+    #get_pfx2proxy_nearest()
+    process_pfx2proxy_nearest()
     
     
 
