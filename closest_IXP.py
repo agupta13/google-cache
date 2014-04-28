@@ -120,8 +120,8 @@ def unique_ixpLocation():
             if chunks[2] not in loc2ixp:
                 loc2ixp[chunks[2]] = []
             loc2ixp[chunks[2]].append((chunks[0], chunks[1]))
-            if count == 10:
-                break
+            #if count == 10:
+            #    break
     print count, len(loc2ixp.keys())
     #print loc2ixp
 
@@ -137,8 +137,9 @@ def unique_prefixes():
             if loc not in loc2pfx:
                 loc2pfx[loc] = []
             loc2pfx[loc].append(tuple(chunks))
-            if count==1000:
-                break
+            
+            #if count==1000:
+            #    break
     print count, len(loc2pfx.keys())
     #print loc2pfx
     
@@ -254,8 +255,8 @@ if __name__ == '__main__':
         prefixes.append(loc2pfx[prefix_loc])
 
     
-    needle_lists = list(split(needles, 60)) #convert generator into list
-    prefix_lists = list(split(prefixes, 60)) 
+    needle_lists = list(split(needles, 60000)) #convert generator into list
+    prefix_lists = list(split(prefixes, 60000)) 
     
     #these should be lists of lists
     assert len(needle_lists) == len(prefix_lists)
