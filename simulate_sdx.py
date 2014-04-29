@@ -588,7 +588,57 @@ def get_pfx2ispfe():
         with open('pfx2ispfe.dat', 'w') as outfile:
             json.dump(pfx2ispfe, outfile, ensure_ascii = True, encoding = "ascii")
         
+
+def get_pfx2proxy_default():
+    # set X is set(edgecast prefixes) - set(prefixes within on-net) - set(prefixes within off-net)
+    pfx2requests = json.load(open(pfx2requestsFile,'r'))
+    pfx2ispfe = json.load(open('pfx2ispfe.dat', 'r'))
+    pfx2gfe = json.load(open('pfx2gfe.dat', 'r'))
+    
+    list1 = []
+    list2 = []
+    Xlist = []
+    count = 0
+    for pfx_info in pfx2requests:
+        count +=1
+        [prefix, asn] = pfx_info.split(',')
+        Xlist.append(prefix)
+        if prefix in pfx2gfe:
+            distance1 = int(pfx2gfe[prefix])
+            if distance1 <= distanceThreshold:
+                list1.append(prefix)
+                
+        if prefix in pfx2ispfe:
+            distance2 = int(pfx2ispfe[prefix])
+            if distance2 <= distanceThreshold:
+                list2.append(prefix)
+        if count == 1000:
+            break
+    
+    print "Starting the set difference operation"   
+    X = set(Xlist)
+    X = X.difference(set(list1))
+    X = X.difference(set(list2))
+    X = list(X)
+    print " # of prefixes which can possibly benefit from IXPs/SDX: ", len(X)
+    pfx2proxy_default = {}
+    for prefix in X:
+        distance1 = 5*distanceThreshold
+        distance2 = 5*distanceThreshold
+        if prefix in pfx2gfe:
+            distance1 = int(pfx2gfe[prefix])
+        if prefix in pfx2ispfe:
+            distance2 = int(pfx2ispfe[prefix])
+        distance = min([distance1, distance2])
+        if distance == 5*distanceThreshold:
+            distance = -1
+        pfx2proxy_default[prefix] = distance
+    
+    print "Dumping the data"
+    with open('pfx2proxy_default.dat', 'w') as outfile:
+        json.dump(pfx2proxy_default, outfile, ensure_ascii=True, encoding="ascii")
         
+            
 def simulate_sdx():
     #get_ixp2proxy()
     #filter_ixp2proxy()
@@ -598,8 +648,10 @@ def simulate_sdx():
     #process_pfx2proxy_nearest()
     #plot_pfx2proxy()
     #get_pfx2requests()
-    get_pfx2gfe()
-    get_pfx2ispfe()
+    #get_pfx2gfe()
+    #get_pfx2ispfe()
+    get_pfx2proxy_default()
+    
     
     
 
