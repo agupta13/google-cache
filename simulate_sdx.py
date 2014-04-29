@@ -472,7 +472,7 @@ def get_pfx2proxy_nearest():
 def get_cdf(elem):
     num_bins=10000
     counts, bin_edges = np.histogram(elem,bins=num_bins,normed=True)
-    print bin_edges
+    #print bin_edges
     cdf=np.cumsum(counts)
     scale = 1.0/cdf[-1]
     cdf=cdf*scale
@@ -824,7 +824,40 @@ def convert_prefixes_to_requests(closest_to_proxy_prefixes):
             
     return closest_to_proxy_queries, total_queries
             
-    
+
+def plot_cdf(input_data, legends, labels, figname):
+    data = input_data
+    legends = legends
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    color_n=['g','r','b','m','c','k','w']
+    markers=['o','*','^','s','d','3','d','o','*','^','1','4']
+    linestyles=[ '--',':','-','-.']
+
+    i =0
+    plots = []
+    for elem in data:
+        x, y = get_cdf(elem)
+        if len(legends) > 0:
+            plots.append(pl.plot(x, y,label=legends[i],color=color_n[i],linestyle=linestyles[i]))
+        else:
+            plots.append(pl.plot(x,y,color=color_n[i],linestyle=linestyles[i]))
+        i += 1
+    if len(legends) > 0:
+        plots = [x[0] for x in plots]
+        pl.legend((plots),legends,'lower right')
+        pl.xlabel(labels[0])
+
+    pl.ylabel(labels[1])
+    ax.set_ylim(ymin=0.01)
+
+    ax.grid(True)
+    plt.tight_layout()
+    plot_name = figname+'.eps'
+    plot_name_png = figname+'.png'
+    pl.savefig(plot_name)
+    pl.savefig(plot_name_png)
+       
     
 
 def analyze_pfx2proxy_triplet():
@@ -835,10 +868,12 @@ def analyze_pfx2proxy_triplet():
     print "Total edgecast prefixes considered: ", total
     closest_to_proxy = {0: 0, 1: 0, 2: 0}
     closest_to_proxy_prefixes = {0: [], 1: [], 2: []}
+    
     improvement_distance = []
+    distance_distribution_improvement = {0: [], 1: [], 2: []}
     for k, v in pfx2proxy_triplet.iteritems():
         
-        v = [(10*distanceThreshold) if x == -1 else x for x in v]
+        v = [(100*distanceThreshold) if x == -1 else x for x in v]
         # Since it returns the first value, we bias in favor of Open peering.
         # This is ok if v[0] != v[2]
         
@@ -847,18 +882,35 @@ def analyze_pfx2proxy_triplet():
             closest_to_proxy[2] +=1
             closest_to_proxy_prefixes[2].append(k)
         else:
+            """ This is the case when links at IXPs can bring client closer to FEs"""
             closest_to_proxy[min_index] +=1
             closest_to_proxy_prefixes[min_index].append(k)
             
-        
-        
         if min_index < 2:
-            if v[2] != 10*distanceThreshold:
+            if v[2] != 100*distanceThreshold:
                 diff = v[2] - v[min_index]
-                if diff > 0:
+                if diff > 0 and diff < 10000:
                     improvement_distance.append(diff)
-            else:
-                print "weired case"
+                    ind = 0
+                    for elem in v:
+                        if elem != 100*distanceThreshold:
+                            if elem < 10000:
+                                distance_distribution_improvement[ind].append(int(elem))
+                        ind +=1
+    
+    print "plot distances cdf"
+    legends = ['Additional Peering Links', 'Existing Peering Links', 'Redirected'] 
+    input_data = distance_distribution_improvement.values()
+    figname = "peering_links_improvements_distances"
+    labels = ['Distance (km)', 'CDF'] 
+    plot_cdf(input_data, legends, labels, figname) 
+    
+    legends = [] 
+    input_data = [improvement_distance]
+    figname = "peering_links_distance_closer"
+    labels = ['Distance (km)', 'CDF'] 
+    plot_cdf(input_data, legends, labels, figname)      
+            
     
     total, average, median, standard_deviation, minimum, maximum, confidence = stats(improvement_distance)
     print "Frontend gets closer for ", len(improvement_distance), " prefixes"
@@ -866,12 +918,14 @@ def analyze_pfx2proxy_triplet():
         
     print "Distribution of closest path to frontend" 
     print "# Prefixes -- redirected: ", closest_to_proxy[2], " open: ", closest_to_proxy[0], " SDX: ", closest_to_proxy[1]
-        
+    
+    print len(distance_distribution_improvement[0]), len(distance_distribution_improvement[1]), len(distance_distribution_improvement[2])
+       
     print " Calling prefix to query converter"
     closest_to_proxy_queries, total_queries = convert_prefixes_to_requests(closest_to_proxy_prefixes) 
     print " Total queries considered: ", total_queries
     print "# Queries -- redirected: ", closest_to_proxy_queries[2], " open: ", closest_to_proxy_queries[0], " SDX: ", closest_to_proxy_queries[1]
-     
+    
     
 
 def simulate_sdx():
