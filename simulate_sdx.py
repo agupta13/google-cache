@@ -640,11 +640,44 @@ def get_pfx2proxy_default():
             distance = -1
             count += 1
         pfx2proxy_default[prefix] = distance
+    
     print count
     print "Dumping the data"
     with open('pfx2proxy_default.dat', 'w') as outfile:
         json.dump(pfx2proxy_default, outfile, ensure_ascii=True, encoding="ascii")
 
+
+def remove_prefixs_asn(dict):
+    out = {}
+    for k, v in dict.iteritems():
+        k1 = k.split(',')[0]
+        out[k1] = v
+    return out
+        
+def merge_edgecast_allprefixes():
+    pfx2proxy_default = json.load(open('pfx2proxy_default.dat','r'))
+    pfx2proxy_nearest = json.load(open(pfx2proxy_nearestFile,'r'))
+    pfx2proxy_nearest = remove_prefixs_asn(pfx2proxy_nearest)
+    print "Sanity check"
+    print " default: ", len(pfx2proxy_default.keys())," nearest: ", len(pfx2proxy_nearest.keys())
+    pfx2proxy_remaining = {}
+    for prefix in pfx2proxy_default:
+        if prefix in pfx2proxy_nearest:
+            distances = pfx2proxy_nearest[prefix]
+            distances.append(pfx2proxy_default[prefix])
+            if sum(distances) != -3:
+                # Do not add if none of the case we considered is able to reach the proxy
+                pfx2proxy_remaining[prefix] = distances
+                
+    print " After merging the two datasets, remaining", len(pfx2proxy_remaining.keys())
+    
+    print "dumping the data"
+    with open('pfx2proxy_remaining.dat', 'w') as outfile:
+        json.dump(pfx2proxy_remaining, outfile, ensure_ascii=True, encoding="ascii")       
+            
+         
+    
+    
 
 def simulate_sdx():
     #get_ixp2proxy()
@@ -654,10 +687,11 @@ def simulate_sdx():
     #get_pfx2proxy_nearest()
     #process_pfx2proxy_nearest()
     #plot_pfx2proxy()
-    get_pfx2requests()
+    #get_pfx2requests()
     #get_pfx2gfe()
     #get_pfx2ispfe()
-    get_pfx2proxy_default()
+    #get_pfx2proxy_default()
+    merge_edgecast_allprefixes()
 
 
 
