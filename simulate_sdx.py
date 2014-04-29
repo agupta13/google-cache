@@ -545,9 +545,10 @@ def get_pfx2requests():
         counter = 0
         for line in f:
             chunks = line.split('\n')[0].split(' ')
-            prefix_key = ','.join([chunks[0],chunks[3]])
-            queries = int(chunks[4])
-            pfx2requests[prefix_key] = queries
+            if len(chunks) == 5:
+                prefix_key = ','.join([chunks[0],chunks[3]])
+                queries = int(chunks[4])
+                pfx2requests[prefix_key] = queries
     
     with open(pfx2requestsFile, 'w') as outfile:
         json.dump(pfx2requests, outfile, ensure_ascii=True, encoding="ascii")
