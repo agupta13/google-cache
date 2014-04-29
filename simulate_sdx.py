@@ -50,6 +50,8 @@ pfx2ixp_updatedFile = 'pfx2ixp_updated.dat'
 ixp2proxy_nearestFile = 'ixp2proxy_nearest.dat'
 pfx2proxy_nearestFile = 'pfx2proxy_nearest.dat'
 pfx2proxy_distancesFile = 'pfx2proxy_distances.dat'
+edgecastprefixFile = 'edgecast_prefix_summary_full_filtered.txt'
+pfx2requestsFile = 'pfx2requests.dat'
 
 
 distanceThreshold = 500 # km
@@ -469,7 +471,7 @@ def get_pfx2proxy_nearest():
 
 def get_cdf(elem):
     num_bins=10000
-    counts, bin_edges = np.histogram(raw[key],bins=num_bins,normed=True)
+    counts, bin_edges = np.histogram(elem,bins=num_bins,normed=True)
     print bin_edges
     cdf=np.cumsum(counts)
     scale = 1.0/cdf[-1]
@@ -494,8 +496,8 @@ def plot_pfx2proxy():
         x, y = get_cdf(elem)
         plots.append(pl.plot(x,y,label=legends[i],color=color_n[i],linestyle=linestyles[i]))
         i += 1
-    
-    pl.legend(plots,legends,'lower right')
+    plots = [x[0] for x in plots]
+    pl.legend((plots),legends,'lower right')
     pl.xlabel('Distance (km)')
 
     pl.ylabel('CDF')
@@ -537,8 +539,55 @@ def process_pfx2proxy_nearest():
         json.dump(pfx2proxy_distances, outfile, ensure_ascii=True, encoding="ascii")
     
         
-        
+def get_pfx2requests():
+    pfx2requests = {}
+    with open(edgecastprefixFile) as f:
+        counter = 0
+        for line in f:
+            chunks = line.split('\n')[0].split(' ')
+            prefix_key = ','.join([chunks[0],chunks[3]])
+            queries = int(chunks[4])
+            pfx2requests[prefix_key] = queries
     
+    with open(pfx2requestsFile, 'w') as outfile:
+        json.dump(pfx2requests, outfile, ensure_ascii=True, encoding="ascii")
+        
+            
+def get_pfx2gfe():
+    # prefix to google front end
+    pfx2gfe = {}
+    with open('prefix_closest_googlehosted.txt') as f:
+        counter = 0
+        for line in f:
+            counter += 1
+            chunks = line.strip().split(' ')
+            prefix = chunks[0]
+            distance = int(float(chunks[3]))
+            pfx2gfe[prefix] = distance
+            #if counter == 10000:
+            #    break
+        
+        with open('pfx2gfe.dat', 'w') as outfile:
+            json.dump(pfx2gfe, outfile, ensure_ascii = True, encoding = "ascii")
+                                               
+
+def get_pfx2ispfe():
+    # prefix to closest provider hosted isp
+    pfx2ispfe = {}
+    with open('prefixes-closest-providers.txt') as f:
+        counter = 0
+        for line in f:
+            counter += 1
+            chunks = line.strip().split(' ')
+            prefix = chunks[0]
+            distance = int(float(chunks[3]))
+            pfx2ispfe[prefix] = distance
+            #if counter == 10000:
+            #    break
+        
+        with open('pfx2ispfe.dat', 'w') as outfile:
+            json.dump(pfx2ispfe, outfile, ensure_ascii = True, encoding = "ascii")
+        
         
 def simulate_sdx():
     #get_ixp2proxy()
@@ -546,8 +595,11 @@ def simulate_sdx():
     #update_pfx2ixp()
     #get_ixp2proxy_nearest()
     #get_pfx2proxy_nearest()
-    process_pfx2proxy_nearest()
-    plot_pfx2proxy()
+    #process_pfx2proxy_nearest()
+    #plot_pfx2proxy()
+    #get_pfx2requests()
+    get_pfx2gfe()
+    get_pfx2ispfe()
     
     
 
