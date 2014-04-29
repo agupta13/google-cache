@@ -812,6 +812,68 @@ def get_pfx2proxy_triplet():
         json.dump(pfx2proxy_triplet, outfile, ensure_ascii=True, encoding="ascii")
 
 
+def convert_prefixes_to_requests(closest_to_proxy_prefixes):
+    closest_to_proxy_queries = {0: 0, 1: 0, 2: 0}
+    total_queries = 0
+    pfx2requests_filtered = json.load(open('pfx2requests_filtered.dat','r'))
+    for k, v in closest_to_proxy_prefixes.iteritems():
+        for prefix in v:
+            nqueries = int(pfx2requests_filtered[prefix])
+            closest_to_proxy_queries[k] += nqueries
+            total_queries += nqueries
+            
+    return closest_to_proxy_queries, total_queries
+            
+    
+    
+
+def analyze_pfx2proxy_triplet():
+    pfx2proxy_triplet = json.load(open('pfx2proxy_triplet.dat','r'))
+    
+    print "loaded the required data structures"
+    total =  len(pfx2proxy_triplet.keys())
+    print "Total edgecast prefixes considered: ", total
+    closest_to_proxy = {0: 0, 1: 0, 2: 0}
+    closest_to_proxy_prefixes = {0: [], 1: [], 2: []}
+    improvement_distance = []
+    for k, v in pfx2proxy_triplet.iteritems():
+        
+        v = [(10*distanceThreshold) if x == -1 else x for x in v]
+        # Since it returns the first value, we bias in favor of Open peering.
+        # This is ok if v[0] != v[2]
+        
+        min_index = v.index(min(v))
+        if (min_index < 2) and (v[min_index] == v[2]):
+            closest_to_proxy[2] +=1
+            closest_to_proxy_prefixes[2].append(k)
+        else:
+            closest_to_proxy[min_index] +=1
+            closest_to_proxy_prefixes[min_index].append(k)
+            
+        
+        
+        if min_index < 2:
+            if v[2] != 10*distanceThreshold:
+                diff = v[2] - v[min_index]
+                if diff > 0:
+                    improvement_distance.append(diff)
+            else:
+                print "weired case"
+    
+    total, average, median, standard_deviation, minimum, maximum, confidence = stats(improvement_distance)
+    print "Frontend gets closer for ", len(improvement_distance), " prefixes"
+    print "Improvements in distance, median: ", median, " maximum: ", maximum  
+        
+    print "Distribution of closest path to frontend" 
+    print "# Prefixes -- redirected: ", closest_to_proxy[2], " open: ", closest_to_proxy[0], " SDX: ", closest_to_proxy[1]
+        
+    print " Calling prefix to query converter"
+    closest_to_proxy_queries, total_queries = convert_prefixes_to_requests(closest_to_proxy_prefixes) 
+    print " Total queries considered: ", total_queries
+    print "# Queries -- redirected: ", closest_to_proxy_queries[2], " open: ", closest_to_proxy_queries[0], " SDX: ", closest_to_proxy_queries[1]
+     
+    
+
 def simulate_sdx():
     #get_ixp2proxy()
     #filter_ixp2proxy()
@@ -829,7 +891,8 @@ def simulate_sdx():
     #pfx2proxy_default = json.load(open('pfx2proxy_default.dat','r'))
     #print len(pfx2proxy_default.keys())
     #get_pfx2proxy_redirected()
-    get_pfx2proxy_triplet()
+    #get_pfx2proxy_triplet()
+    analyze_pfx2proxy_triplet()
 
 
 if __name__ == '__main__':
