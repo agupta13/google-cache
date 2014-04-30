@@ -836,14 +836,19 @@ def convert_prefixes_to_requests(closest_to_proxy_prefixes, pfx2distance_improve
         for prefix in v:
             nqueries = int(pfx2requests_filtered[prefix])
             if prefix in pfx2distance_improvements:
+                query_distance_improvements.extend([pfx2distance_improvements[prefix] for i in range(100)])
+                query_distance_distribution_merged[0].extend(pfx2distance_distribution_merged[0][prefix] for i in range(100))
+                query_distance_distribution_merged[1].extend(pfx2distance_distribution_merged[1][prefix] for i in range(100))
+                """
                 for ind in range(nqueries):
                     query_distance_improvements.append(pfx2distance_improvements[prefix])
                     query_distance_distribution_merged[0].append(pfx2distance_distribution_merged[0][prefix])
                     query_distance_distribution_merged[1].append(pfx2distance_distribution_merged[1][prefix])
+                """
             closest_to_proxy_queries[k] += nqueries
             total_queries += nqueries
 
-    return closest_to_proxy_queries, total_queries, query_distance_improvements
+    return closest_to_proxy_queries, total_queries, query_distance_improvements, query_distance_distribution_merged
 
 
 def plot_cdf(input_data, legends, labels, figname, limits):
