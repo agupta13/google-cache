@@ -1028,6 +1028,55 @@ def stats_from_analyzed_data():
     print "Out of the prefixes getting benefitted with IXPs, on_net: ", on_net, "off_net: ", off_net
 
 
+def analyse_ixps_not_connected():
+    ixp2proxy_nearest = json.load(open(ixp2proxy_nearestFile,'r'))
+    ixp2location = {}
+    connected = []
+    unique = []
+    with open('ixp2location.txt') as f:
+        for line in f:
+            chunks = line.strip().split('|')
+            ixp2location[','.join(chunks[:2])] = chunks[2]
+            
+    for elem in ixp2location.values():
+        if elem not in unique:
+            unique.append(elem)
+           
+    not_connected_list = []
+    for k, v in ixp2proxy_nearest.iteritems():
+
+        if sum(v) != -2:
+            if ixp2location[k] not in connected:
+                connected.append(ixp2location[k])
+                
+    for k, v in ixp2proxy_nearest.iteritems():
+
+        if sum(v) == -2:
+            if ixp2location[k] not in connected:
+                not_connected_list.append(k)
+
+        
+    print not_connected_list
+    print "Total unique locations: ", len(unique)
+    print "Total unique connected: ", len(connected)
+    print "Total: ", len(ixp2proxy_nearest.keys()),"not connected:", len(not_connected_list)
+    
+
+def analyse_pfx2ixp_no_provider():
+    pfx2proxy_triplet = json.load(open('pfx2proxy_triplet.dat','r'))
+    pfx2ixp_with_provider = json.load(open('pfx2ixp_updated.dat','r'))
+    pfx2ixp_with_provider = remove_prefixs_asn(pfx2ixp_with_provider)
+    no_provider = []
+    for prefix in pfx2proxy_triplet:
+        if prefix not in pfx2ixp_with_provider:
+            no_provider.append(prefix)
+    print "Total Edgecast considered: ", len(pfx2proxy_triplet.keys())
+    print "Total with provider: ", len(pfx2ixp_with_provider.keys())
+    print "Edgecast without provider at IXP", len(no_provider)
+            
+    
+                
+
 def simulate_sdx():
     #get_ixp2proxy()
     #filter_ixp2proxy()
@@ -1047,8 +1096,11 @@ def simulate_sdx():
     #get_pfx2proxy_redirected()
     #get_pfx2proxy_triplet()
     #get_pfx2proxy_asn()
-    analyze_pfx2proxy_triplet()
+    #analyze_pfx2proxy_triplet()
     #stats_from_analyzed_data()
+    
+    analyse_ixps_not_connected()
+    analyse_pfx2ixp_no_provider()
 
 
 
