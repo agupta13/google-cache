@@ -17,7 +17,7 @@ from geopy import geocoders
 from geopy import distance
 from statistics import *
 
-
+"""
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -27,6 +27,7 @@ import numpy as np
 from statistics import *
 from matplotlib.ticker import MaxNLocator
 my_locator = MaxNLocator(6)
+"""
 
 #import proxyIXPClustering as pxyixp
 #import pdbParser as pdbParser
@@ -781,6 +782,17 @@ def get_pfx2proxy_redirected():
     with open('pfx2proxy_redirected.dat', 'w') as outfile:
         json.dump(pfx2proxy_redirected, outfile, ensure_ascii=True, encoding="ascii")
 
+def get_pfx2proxy_asn():
+    pfx2proxy_asn = {}
+    with open('prefixes-default.txt') as f:
+        for line in f:
+            chunks = line.strip().split(' ')
+            if len(chunks) == 4:
+                pfx2proxy_asn[chunks[0]] = int(float(chunks[2]))
+                
+    with open('pfx2proxy_asn.dat', 'w') as outfile:
+        json.dump(pfx2proxy_asn, outfile, ensure_ascii=True, encoding="ascii")
+
 
 def get_pfx2proxy_triplet():
     pfx2proxy_nearest = json.load(open(pfx2proxy_nearestFile,'r'))
@@ -846,8 +858,8 @@ def plot_cdf(input_data, legends, labels, figname):
     if len(legends) > 0:
         plots = [x[0] for x in plots]
         pl.legend((plots),legends,'lower right')
-        pl.xlabel(labels[0])
-
+    
+    pl.xlabel(labels[0])
     pl.ylabel(labels[1])
     ax.set_ylim(ymin=0.01)
 
@@ -866,11 +878,14 @@ def analyze_pfx2proxy_triplet():
     print "loaded the required data structures"
     total =  len(pfx2proxy_triplet.keys())
     print "Total edgecast prefixes considered: ", total
-    closest_to_proxy = {0: 0, 1: 0, 2: 0}
-    closest_to_proxy_prefixes = {0: [], 1: [], 2: []}
     
+    closest_to_proxy = {0: 0, 1: 0, 2: 0}
+    closest_to_proxy_prefixes = {0: [], 1: [], 2: []}    
     improvement_distance = []
     distance_distribution_improvement = {0: [], 1: [], 2: []}
+    
+    analyzed_data = {}
+    
     for k, v in pfx2proxy_triplet.iteritems():
         
         v = [(100*distanceThreshold) if x == -1 else x for x in v]
@@ -899,7 +914,7 @@ def analyze_pfx2proxy_triplet():
                         ind +=1
     
     print "plot distances cdf"
-    legends = ['Additional Peering Links', 'Existing Peering Links', 'Redirected'] 
+    legends = ['Existing Peering Links', 'Additional Peering Links', 'Redirected'] 
     input_data = distance_distribution_improvement.values()
     figname = "peering_links_improvements_distances"
     labels = ['Distance (km)', 'CDF'] 
@@ -920,12 +935,37 @@ def analyze_pfx2proxy_triplet():
     print "# Prefixes -- redirected: ", closest_to_proxy[2], " open: ", closest_to_proxy[0], " SDX: ", closest_to_proxy[1]
     
     print len(distance_distribution_improvement[0]), len(distance_distribution_improvement[1]), len(distance_distribution_improvement[2])
-       
+    """  
     print " Calling prefix to query converter"
     closest_to_proxy_queries, total_queries = convert_prefixes_to_requests(closest_to_proxy_prefixes) 
     print " Total queries considered: ", total_queries
     print "# Queries -- redirected: ", closest_to_proxy_queries[2], " open: ", closest_to_proxy_queries[0], " SDX: ", closest_to_proxy_queries[1]
+    """
     
+    analyzed_data['closest_to_proxy'] = closest_to_proxy
+    analyzed_data['closest_to_proxy_prefixes'] = closest_to_proxy_prefixes
+    analyzed_data['improvement_distance'] = improvement_distance
+    analyzed_data['distance_distribution_improvement'] = distance_distribution_improvement
+    
+    with open('analyzed_data.dat','w') as outfile:
+        json.dump(analyzed_data, outfile, ensure_ascii=True, encoding="ascii")
+    
+
+def stats_from_analyzed_data():  
+    analyzed_data = json.load(open('analyzed_data.dat','r')) 
+    pfx2proxy_asn = json.load(open('pfx2proxy_asn.dat','r'))
+    on_net = 0
+    off_net = 0
+    #print analyzed_data.keys()
+    for k in analyzed_data['closest_to_proxy_prefixes']:
+        if int(k) < 2:
+            for prefix in analyzed_data['closest_to_proxy_prefixes'][k]:
+                asn = int(pfx2proxy_asn[prefix])
+                if asn in [15169, 36040]:
+                    on_net += 1
+                else:
+                    off_net += 1
+    print "Out of the prefixes getting benefitted with IXPs, on_net: ", on_net, "off_net: ", off_net
     
 
 def simulate_sdx():
@@ -946,7 +986,10 @@ def simulate_sdx():
     #print len(pfx2proxy_default.keys())
     #get_pfx2proxy_redirected()
     #get_pfx2proxy_triplet()
-    analyze_pfx2proxy_triplet()
+    #get_pfx2proxy_asn()
+    #analyze_pfx2proxy_triplet()
+    stats_from_analyzed_data()
+    
 
 
 if __name__ == '__main__':
