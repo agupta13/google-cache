@@ -1066,10 +1066,17 @@ def analyse_pfx2ixp_no_provider():
     pfx2proxy_triplet = json.load(open('pfx2proxy_triplet.dat','r'))
     pfx2ixp_with_provider = json.load(open('pfx2ixp_updated.dat','r'))
     pfx2ixp_with_provider = remove_prefixs_asn(pfx2ixp_with_provider)
+    
+    pfx2ixp_nearby = json.load(open('pfx2ixp.dat','r'))
+    pfx2ixp_nearby = remove_prefixs_asn(pfx2ixp_nearby)
+    
+    print "Loaded the required data structures"
     no_provider = []
     for prefix in pfx2proxy_triplet:
-        if prefix not in pfx2ixp_with_provider:
-            no_provider.append(prefix)
+        if prefix in pfx2ixp_nearby:
+            if prefix not in pfx2ixp_with_provider:
+                no_provider.append(prefix)
+    
     print "Total Edgecast considered: ", len(pfx2proxy_triplet.keys())
     print "Total with provider: ", len(pfx2ixp_with_provider.keys())
     print "Edgecast without provider at IXP", len(no_provider)
