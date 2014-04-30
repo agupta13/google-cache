@@ -824,10 +824,12 @@ def get_pfx2proxy_triplet():
         json.dump(pfx2proxy_triplet, outfile, ensure_ascii=True, encoding="ascii")
 
 
-def convert_prefixes_to_requests(closest_to_proxy_prefixes, pfx2distance_improvements):
+def convert_prefixes_to_requests(closest_to_proxy_prefixes, pfx2distance_improvements, 
+                                 pfx2distance_distribution_merged):
     closest_to_proxy_queries = {0: 0, 1: 0, 2: 0}
     total_queries = 0
     query_distance_improvements = []
+    query_distance_distribution_merged = {0:[], 1:[]}
     pfx2requests_filtered = json.load(open('pfx2requests_filtered.dat','r'))
     for k, v in closest_to_proxy_prefixes.iteritems():
 
@@ -836,6 +838,8 @@ def convert_prefixes_to_requests(closest_to_proxy_prefixes, pfx2distance_improve
             if prefix in pfx2distance_improvements:
                 for ind in range(nqueries):
                     query_distance_improvements.append(pfx2distance_improvements[prefix])
+                    query_distance_distribution_merged[0].append(pfx2distance_distribution_merged[0][prefix])
+                    query_distance_distribution_merged[1].append(pfx2distance_distribution_merged[1][prefix])
             closest_to_proxy_queries[k] += nqueries
             total_queries += nqueries
 
@@ -895,6 +899,7 @@ def analyze_pfx2proxy_triplet():
     improvement_distance = []
     distance_distribution_improvement = {0: [], 1: [], 2: []}
     distance_distribution_merged = {0: [], 1: []}
+    pfx2distance_distribution_merged = {0: {}, 1: {}}
     pfx2distance_improvements = {}
 
 
@@ -921,7 +926,9 @@ def analyze_pfx2proxy_triplet():
 
                 if diff > 0 and diff < 10000:
                     distance_distribution_merged[0].append(v[min_index])
+                    pfx2distance_distribution_merged[0][k] = v[min_index]
                     distance_distribution_merged[1].append(v[2])
+                    pfx2distance_distribution_merged[1][k] = v[2]
                     improvement_distance.append(diff)
                     pfx2distance_improvements[k] = diff
                     ind = 0
@@ -964,13 +971,23 @@ def analyze_pfx2proxy_triplet():
     print len(distance_distribution_improvement[0]), len(distance_distribution_improvement[1]), len(distance_distribution_improvement[2])
 
     print " Calling prefix to query converter"
-    closest_to_proxy_queries, total_queries, query_distance_improvements = convert_prefixes_to_requests(closest_to_proxy_prefixes, pfx2distance_improvements)
+    closest_to_proxy_queries, total_queries, query_distance_improvements, query_distance_distribution_merged = convert_prefixes_to_requests(closest_to_proxy_prefixes, 
+                                                                                                        pfx2distance_improvements, pfx2distance_distribution_merged)
     print " Total queries considered: ", total_queries
     print "# Queries -- redirected: ", closest_to_proxy_queries[2], " open: ", closest_to_proxy_queries[0], " SDX: ", closest_to_proxy_queries[1]
 
+    print "plot the query cdfs"
+    
     legends = []
     input_data = [query_distance_improvements]
     figname = "peering_links_distance_closer_queries"
+    labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}']
+    limits = {'x':[-1,6000], 'y':[0.01,-1]}
+    plot_cdf(input_data, legends, labels, figname, limits)
+    
+    legends = ['IXP Frontend', 'Redirected Frontend']
+    input_data = query_distance_distribution_merged.values()
+    figname = "peering_links_merged_distances_queries"
     labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}']
     limits = {'x':[-1,6000], 'y':[0.01,-1]}
     plot_cdf(input_data, legends, labels, figname, limits)
@@ -982,10 +999,12 @@ def analyze_pfx2proxy_triplet():
     analyzed_data['distance_distribution_improvement'] = distance_distribution_improvement
     analyzed_data['distance_distribution_merged'] = distance_distribution_merged
     analyzed_data['query_distance_improvements'] = query_distance_improvements
-
+    
+    print "dump the data"
+    """
     with open('analyzed_data.dat','w') as outfile:
         json.dump(analyzed_data, outfile, ensure_ascii=True, encoding="ascii")
-
+    """
 
 def stats_from_analyzed_data():
     analyzed_data = json.load(open('analyzed_data.dat','r'))
