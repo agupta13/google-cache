@@ -830,10 +830,12 @@ def convert_prefixes_to_requests(closest_to_proxy_prefixes, pfx2distance_improve
     query_distance_improvements = []
     pfx2requests_filtered = json.load(open('pfx2requests_filtered.dat','r'))
     for k, v in closest_to_proxy_prefixes.iteritems():
+        
         for prefix in v:
             nqueries = int(pfx2requests_filtered[prefix])
-            for ind in range(nqueries):
-                query_distance_improvements.append(pfx2distance_improvements[prefix])
+            if prefix in pfx2requests_filtered:
+                for ind in range(nqueries):
+                    query_distance_improvements.append(pfx2distance_improvements[prefix])
             closest_to_proxy_queries[k] += nqueries
             total_queries += nqueries
             
