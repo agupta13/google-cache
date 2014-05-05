@@ -13,7 +13,7 @@ import traceback
 import logging
 import itertools
 
-from geopy import geocoders 
+from geopy import geocoders
 from geopy import distance
 from statistics import *
 
@@ -79,7 +79,7 @@ def fix_asn(asn):
         asn = asn.split('{')[1].split('}')[0]
     if '*' in asn:
         asn = -1
-    
+
     return asn
 
 
@@ -91,7 +91,7 @@ def is_connected(isp_asn, ixp_id):
         else:
             return False
     else:
-        return False  
+        return False
 
 
 def get_policy(isp_asn):
@@ -99,8 +99,8 @@ def get_policy(isp_asn):
         return participant2policy[math.ceil(float(isp_asn))]
     else:
         return "NA"
-    
-    
+
+
 def parse_IXP2Location():
     with open(ixp2locationFile) as f:
         for line in f:
@@ -143,7 +143,7 @@ def unique_prefixes():
                 break
     print count, len(loc2pfx.keys())
     #print loc2pfx
-    
+
 def dist_vector(needle, haystack):
     """
     Calculate the distance from needle to all points in haystack
@@ -151,7 +151,7 @@ def dist_vector(needle, haystack):
     lats = [float(x[0]) for x in haystack]
     lons = [float(x[1]) for x in haystack]
     #print lats, [needle[0]]
-    
+
     #needle[0] = float(needle[0])
     #needle[1] = float(needle[1])
 
@@ -177,7 +177,7 @@ def process(needle_list, prefix_list):
 
     try:
         distances = list()
-        
+
         #for needle in needle_list:
         for i in range(0, len(needle_list)):
             needle = needle_list[i]
@@ -188,7 +188,7 @@ def process(needle_list, prefix_list):
             #print prefix
             str = ''+','.join(list(needle))+'|'
             for elem in dist[0]:
-                str += ','.join(list(elem)) 
+                str += ','.join(list(elem))
                 str += ',' + '%.0f' % dist[1]
                 #str += ','+str(float(dist[1])
                 str += '|'
@@ -212,27 +212,27 @@ def get_location2proxy():
                     location2proxy[proxy_location].append(asn)
 
 
-def get_ixp2proxy_thresh(thresh,d):    
+def get_ixp2proxy_thresh(thresh,d):
     for ixp_id in ixp2location:
         try:
             name, loc_ixp = ixp2location[ixp_id]
             print name, loc_ixp
             print "Analysing for IXP: ", name
-            for proxy_location in location2proxy: 
-                             
+            for proxy_location in location2proxy:
+
                 distance = d(loc_ixp, proxy_location).km
                 #print "proxy_location", proxy_location, "loc_ixp: ",loc_ixp, distance
                 if distance < thresh:
                     print "matched for the proxy", location2proxy[proxy_location]
                     if ixp_id not in ixp2proxy:
                         ixp2proxy[ixp_id]=[name]
-                    for asn in location2proxy[proxy_location]:                                      
+                    for asn in location2proxy[proxy_location]:
                         ixp2proxy[ixp_id].append((asn,int(distance)))
-                    
+
         except:
             e = sys.exc_info()
             print e
-            print "not able to process: ", ixp2location[ixp_id]    
+            print "not able to process: ", ixp2location[ixp_id]
 
 
 def get_ixp2participants(con):
@@ -253,11 +253,11 @@ def get_ixp2participants(con):
                     if elem not in participants:
                         participants.append(elem)
 
-                ixp2participants[int(ixp_id)] = (ixp_name,participants) 
-    
+                ixp2participants[int(ixp_id)] = (ixp_name,participants)
+
     with open(ixp2participantsFile, 'w') as outfile:
         json.dump(ixp2participants, outfile, ensure_ascii=True, encoding="ascii")
-   
+
 
 def split(l, n):
     """ Yield successive n-sized chunks from l.
@@ -276,24 +276,24 @@ def get_participants2policy(con):
             asn, policy = elem
             if asn!=None:
                 participant2policy[int(asn)] = str(policy)
-                
+
     with open(participant2policyFile, 'w') as outfile:
         json.dump(participant2policy, outfile, ensure_ascii=True, encoding="ascii")
-    
-    
+
+
 def get_ixp2proxy():
     parse_IXP2Location()
     get_location2proxy()
-    #print len(location2proxy.keys())    
-    
+    #print len(location2proxy.keys())
+
     thresh = distanceThreshold
-    d = distance.distance 
+    d = distance.distance
     get_ixp2proxy_thresh(thresh,d)
     print len(ixp2proxy.keys())
     with open(ixp2proxyFile, 'w') as outfile:
         json.dump(ixp2proxy,outfile,ensure_ascii=True,encoding="ascii")
-       
-    
+
+
 def update_ixp2proxy():
     ixp2proxy = json.load(open(ixp2proxyFile, 'r'))
     tmp = {}
@@ -302,11 +302,11 @@ def update_ixp2proxy():
         isps = ixp2proxy[ixp_id][1:]
         key = ','.join([ixp_id,ixp_name])
         tmp[key] = {}
-        
+
         for isp in isps:
             isp_asn = str(isp[0])
             distance = int(isp[1])
-            
+
             isp_asn = fix_asn(isp_asn)
             ixp_connected = is_connected(isp_asn,ixp_id)
             if ixp_connected:
@@ -321,33 +321,33 @@ def update_ixp2proxy():
                 if distance < cur_distance:
                     tmp[key][isp_asn] = (distance, tmp[key][isp_asn][1])
         #print tmp[ixp_id]
-        
+
     ixp2proxy_updated = tmp
     with open(ixp2proxy_updatedFile, 'w') as outfile:
         json.dump(ixp2proxy_updated, outfile, ensure_ascii=True, encoding="ascii")
     print len(ixp2proxy_updated.keys())
-                
-        
+
+
 def filter_ixp2proxy():
     """
        If an AS has two frontend locations nearby an IXP, we'll consider the nearest one.
        Currently we are considering the case where hosting ISP is direct connected at the IXP.
-       We can later extend this work where hosting ISP's provider is present at the IXP. 
+       We can later extend this work where hosting ISP's provider is present at the IXP.
     """
     con = lite.connect(dbFile)
     get_ixp2participants(con)
     get_participants2policy(con)
     update_ixp2proxy()
 
-    
+
 def update_pfx2ixp():
     ixp2customer = json.load(open(ixp2customersFile,'r'))
     participant2policy = json.load(open(participant2policyFile,'r'))
     pfx2ixp = json.load(open(pfx2ixpFile,'r'))
     pfx2ixp_updated = {}
-    
+
     for prefix_info in pfx2ixp:
-        pfx2ixp_updated[prefix_info] = {}        
+        pfx2ixp_updated[prefix_info] = {}
         pfx_asn = prefix_info.split(',')[1]
         for ixp_info in pfx2ixp[prefix_info]:
             asn = ''
@@ -360,10 +360,10 @@ def update_pfx2ixp():
                 asn = pfx_asn
                 #print participant2policy.keys()[0]
                 if asn in participant2policy:
-                    policy = participant2policy[asn] 
+                    policy = participant2policy[asn]
                 else:
-                    policy = 'NA' 
-                #print [asn, policy, distance]                              
+                    policy = 'NA'
+                #print [asn, policy, distance]
             else:
                 # check if prefix's AS is customer to IXP's participants
                 for ixp_parts in ixp2customer[ixp_info]:
@@ -371,9 +371,9 @@ def update_pfx2ixp():
                         #print "case 2"
                         asn = ixp_parts
                         if asn in participant2policy:
-                            policy = participant2policy[asn] 
+                            policy = participant2policy[asn]
                         else:
-                            policy = 'NA' 
+                            policy = 'NA'
                         #policy = participant2policy[asn]
                         #print [asn, policy, distance]
                         break
@@ -385,13 +385,13 @@ def update_pfx2ixp():
     print len(pfx2ixp_updated.keys())
     with open(pfx2ixp_updatedFile, 'w') as outfile:
         json.dump(pfx2ixp_updated, outfile, ensure_ascii=True, encoding="ascii")
-                        
+
 
 def get_ixp2proxy_nearest():
     ixp2proxy_updated = json.load(open(ixp2proxy_updatedFile,'r'))
-    ixp2proxy_nearest = {}        
+    ixp2proxy_nearest = {}
     for k1,v1 in ixp2proxy_updated.iteritems():
-        
+
         tmp1 = [] # distances to proxies with "open" policies
         tmp2 = [] # distances to all other connected proxies
         for k2,v2 in v1.iteritems():
@@ -403,7 +403,7 @@ def get_ixp2proxy_nearest():
                     tmp1.append(distance)
         tmp1.sort()
         tmp2.sort()
-        
+
         if len(tmp1) > 0:
             min_open = tmp1[0]
         else:
@@ -412,18 +412,18 @@ def get_ixp2proxy_nearest():
             min_sdx = tmp2[0]
         else:
             min_sdx = -1
-        
+
         ixp2proxy_nearest[k1] = [min_open, min_sdx]
-    
+
     print ixp2proxy_nearest
-    
+
     with open(ixp2proxy_nearestFile, 'w') as outfile:
         json.dump(ixp2proxy_nearest, outfile, ensure_ascii=True, encoding="ascii")
-        
-        
+
+
 def get_pfx2proxy_nearest():
     ixp2proxy_nearest = json.load(open(ixp2proxy_nearestFile,'r'))
-    pfx2ixp_updated = json.load(open(pfx2ixp_updatedFile,'r')) 
+    pfx2ixp_updated = json.load(open(pfx2ixp_updatedFile,'r'))
     pfx2proxy_nearest = {}
     for k1, v1 in  pfx2ixp_updated.iteritems():
         tmp1 = []
@@ -439,35 +439,35 @@ def get_pfx2proxy_nearest():
                 if policy == 'open':
                     # Get distance from IXP to proxy
                     distance_open = int(ixp2proxy_nearest[k2][0])
-                    
-                    if distance_open >= 0:                    
+
+                    if distance_open >= 0:
                         tmp1.append(distance1 + distance_open)
                 distance_sdx = int(ixp2proxy_nearest[k2][1])
                 if distance_sdx >= 0:
                     tmp2.append(distance1 + distance_sdx)
-        
+
         tmp1.sort()
         tmp2.sort()
         #print tmp1, tmp2
-        
+
         if len(tmp1) > 0:
             min_open = tmp1[0]
         else:
             min_open = -1
-            
+
         if len(tmp2) > 0:
             min_sdx = tmp2[0]
         else:
             min_sdx = -1
-        
+
         pfx2proxy_nearest[k1] = [min_open, min_sdx]
         #print pfx2proxy_nearest[k1]
-    
+
     print pfx2proxy_nearest
-    
+
     with open(pfx2proxy_nearestFile, 'w') as outfile:
         json.dump(pfx2proxy_nearest, outfile, ensure_ascii=True, encoding="ascii")
-               
+
 
 def get_cdf(elem):
     num_bins=10000
@@ -480,7 +480,7 @@ def get_cdf(elem):
 
 
 def plot_pfx2proxy():
-    
+
     pfx2proxy_distances = json.load(open(pfx2proxy_distancesFile,'r'))
     data = pfx2proxy_distances.values()
     legends = pfx2proxy_distances.keys()
@@ -489,7 +489,7 @@ def plot_pfx2proxy():
     color_n=['g','r','b','m','c','k','w']
     markers=['o','*','^','s','d','3','d','o','*','^','1','4']
     linestyles=[ '--',':','-','-.']
-    
+
     i =0
     plots = []
     for elem in data:
@@ -502,16 +502,16 @@ def plot_pfx2proxy():
 
     pl.ylabel('CDF')
     ax.set_ylim(ymin=0.01)
-        
+
     ax.grid(True)
     plt.tight_layout()
     plot_name='pfx2proxy'+'.eps'
     plot_name_png='pfx2proxy'+'.png'
     pl.savefig(plot_name)
     pl.savefig(plot_name_png)
-            
-    
-                    
+
+
+
 
 
 def process_pfx2proxy_nearest():
@@ -523,22 +523,22 @@ def process_pfx2proxy_nearest():
         distances_sdx.append(int(v[1]))
     print "# of prefixes into consideration: ", len(distances_sdx)
     distances_open = filter(lambda x: x >=0, distances_open)
-    total, average, median, standard_deviation, minimum, maximum, confidence = stats(distances_open, 
+    total, average, median, standard_deviation, minimum, maximum, confidence = stats(distances_open,
                                                                                      confidence_interval=0.05)
-    print "# of prefixes crossing IXP with existing OPEN policies: ", len(distances_open), "median: ", median 
+    print "# of prefixes crossing IXP with existing OPEN policies: ", len(distances_open), "median: ", median
     distances_sdx = filter(lambda x: x >=0, distances_sdx)
-    total, average, median, standard_deviation, minimum, maximum, confidence = stats(distances_sdx, 
+    total, average, median, standard_deviation, minimum, maximum, confidence = stats(distances_sdx,
                                                                                      confidence_interval=0.05)
-    
-    print "# of prefixes crossing IXP with existing SDX policies:  ", len(distances_sdx), "median: ", median 
+
+    print "# of prefixes crossing IXP with existing SDX policies:  ", len(distances_sdx), "median: ", median
     pfx2proxy_distances = {}
     pfx2proxy_distances['SDX-SDX'] = distances_sdx
     pfx2proxy_distances['Open-Open'] = distances_open
-    
+
     with open(pfx2proxy_distancesFile, 'w') as outfile:
         json.dump(pfx2proxy_distances, outfile, ensure_ascii=True, encoding="ascii")
-    
-        
+
+
 def get_pfx2requests():
     pfx2requests = {}
     with open(edgecastprefixFile) as f:
@@ -549,11 +549,11 @@ def get_pfx2requests():
                 prefix_key = ','.join([chunks[0],chunks[3]])
                 queries = int(chunks[4])
                 pfx2requests[prefix_key] = queries
-    
+
     with open(pfx2requestsFile, 'w') as outfile:
         json.dump(pfx2requests, outfile, ensure_ascii=True, encoding="ascii")
-        
-            
+
+
 def get_pfx2gfe():
     # prefix to google front end
     pfx2gfe = {}
@@ -567,10 +567,10 @@ def get_pfx2gfe():
             pfx2gfe[prefix] = distance
             #if counter == 10000:
             #    break
-        
+
         with open('pfx2gfe.dat', 'w') as outfile:
             json.dump(pfx2gfe, outfile, ensure_ascii = True, encoding = "ascii")
-                                               
+
 
 def get_pfx2ispfe():
     # prefix to closest provider hosted isp
@@ -585,61 +585,67 @@ def get_pfx2ispfe():
             pfx2ispfe[prefix] = distance
             #if counter == 10000:
             #    break
-        
+
         with open('pfx2ispfe.dat', 'w') as outfile:
             json.dump(pfx2ispfe, outfile, ensure_ascii = True, encoding = "ascii")
-        
+
 
 def get_pfx2proxy_default():
     # set X is set(edgecast prefixes) - set(prefixes within on-net) - set(prefixes within off-net)
     pfx2requests = json.load(open(pfx2requestsFile,'r'))
     pfx2ispfe = json.load(open('pfx2ispfe.dat', 'r'))
     pfx2gfe = json.load(open('pfx2gfe.dat', 'r'))
-    
+
     list1 = []
     list2 = []
     Xlist = []
     count = 0
+    print "# of prefixes from edgecast: ", len(pfx2requests.keys())
     for pfx_info in pfx2requests:
         count +=1
-        [prefix, asn] = pfx_info.split(',')
+        chunks = pfx_info.split(',')
+
+        [prefix, asn] = chunks[:2]
+        #[prefix, asn] = pfx_info.split(',')
         Xlist.append(prefix)
         if prefix in pfx2gfe:
             distance1 = int(pfx2gfe[prefix])
             if distance1 <= distanceThreshold:
                 list1.append(prefix)
-                
+
         if prefix in pfx2ispfe:
             distance2 = int(pfx2ispfe[prefix])
             if distance2 <= distanceThreshold:
                 list2.append(prefix)
-        if count == 1000:
-            break
-    
-    print "Starting the set difference operation"   
+        #if count == 1000:
+        #    break
+
+    print "Starting the set difference operation", len(Xlist), len(list1),len(list2)
     X = set(Xlist)
     X = X.difference(set(list1))
     X = X.difference(set(list2))
     X = list(X)
     print " # of prefixes which can possibly benefit from IXPs/SDX: ", len(X)
     pfx2proxy_default = {}
+    count = 0
     for prefix in X:
-        distance1 = 5*distanceThreshold
-        distance2 = 5*distanceThreshold
+        distance1 = 10*distanceThreshold
+        distance2 = 10*distanceThreshold
         if prefix in pfx2gfe:
             distance1 = int(pfx2gfe[prefix])
         if prefix in pfx2ispfe:
             distance2 = int(pfx2ispfe[prefix])
         distance = min([distance1, distance2])
-        if distance == 5*distanceThreshold:
+        if distance == 10*distanceThreshold:
             distance = -1
+            count += 1
         pfx2proxy_default[prefix] = distance
-    
+    print count
     print "Dumping the data"
     with open('pfx2proxy_default.dat', 'w') as outfile:
         json.dump(pfx2proxy_default, outfile, ensure_ascii=True, encoding="ascii")
-        
-            
+
+
 def simulate_sdx():
     #get_ixp2proxy()
     #filter_ixp2proxy()
@@ -648,15 +654,15 @@ def simulate_sdx():
     #get_pfx2proxy_nearest()
     #process_pfx2proxy_nearest()
     #plot_pfx2proxy()
-    #get_pfx2requests()
+    get_pfx2requests()
     #get_pfx2gfe()
     #get_pfx2ispfe()
     get_pfx2proxy_default()
-    
-    
-    
 
-    
+
+
+
+
 
 if __name__ == '__main__':
     simulate_sdx()
