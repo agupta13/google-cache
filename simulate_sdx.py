@@ -700,8 +700,16 @@ def compare_edgecast_allprefixes():
     set2 = set(pfx2location.keys())
     set3 = set.intersection(set1, set2)
     print len(set3)
-
-
+    pfx2proxy_nearest = json.load(open(pfx2proxy_nearestFile,'r'))
+    pfx2proxy_nearest = remove_prefixs_asn(pfx2proxy_nearest)
+    set4 = set(pfx2proxy_nearest.keys())
+    set5 = set.intersection(set3, set4)
+    print "# of prefixes near IXPs with location data: ", len(set4)
+    print len(set5)
+    pfx2proxy_default = json.load(open('pfx2proxy_default.dat','r'))
+    set6 = set(pfx2proxy_default.keys())
+    set7 = set.intersection(set5, set6)
+    print "# of prefixes which can benefit from new peerings", len(set7)
 
 
 def simulate_sdx():
@@ -718,8 +726,8 @@ def simulate_sdx():
     #get_pfx2proxy_default()
     #merge_edgecast_allprefixes()
     compare_edgecast_allprefixes()
-
-
+    #pfx2proxy_default = json.load(open('pfx2proxy_default.dat','r'))
+    #print len(pfx2proxy_default.keys())
 
 
 
