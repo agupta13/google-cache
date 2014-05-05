@@ -666,7 +666,7 @@ def merge_edgecast_allprefixes():
     print len(set3)
     print pfx2proxy_nearest.keys()
     return 0
-    
+
     pfx2proxy_remaining = {}
     for prefix in pfx2proxy_default:
         #print prefix
@@ -689,15 +689,19 @@ def compare_edgecast_allprefixes():
     with open(pfx2locationFile) as f:
         for line in f:
             chunks = line.strip().split(' ')
-            pfx2location[chunks[0]] = ''
+            pfx2location[unicode(chunks[0])] = ''
+
+    print pfx2location.keys()[:10]
+
     pfx2requests = json.load(open(pfx2requestsFile,'r'))
-    
+    pfx2requests = remove_prefixs_asn(pfx2requests)
+    print pfx2requests.keys()[:10]
     set1 = set(pfx2requests.keys())
     set2 = set(pfx2location.keys())
-    set3 = set1.intersection(set2)
-    print len(set3)      
-            
-    
+    set3 = set.intersection(set1, set2)
+    print len(set3)
+
+
 
 
 def simulate_sdx():
