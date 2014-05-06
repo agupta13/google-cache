@@ -685,6 +685,7 @@ def merge_edgecast_allprefixes():
 
 
 def compare_edgecast_allprefixes():
+
     pfx2location = {}
     with open(pfx2locationFile) as f:
         for line in f:
@@ -700,16 +701,65 @@ def compare_edgecast_allprefixes():
     set2 = set(pfx2location.keys())
     set3 = set.intersection(set1, set2)
     print len(set3)
+    """
+
     pfx2proxy_nearest = json.load(open(pfx2proxy_nearestFile,'r'))
     pfx2proxy_nearest = remove_prefixs_asn(pfx2proxy_nearest)
     set4 = set(pfx2proxy_nearest.keys())
-    set5 = set.intersection(set3, set4)
+    #set5 = set.intersection(set3, set4)
     print "# of prefixes near IXPs with location data: ", len(set4)
-    print len(set5)
-    pfx2proxy_default = json.load(open('pfx2proxy_default.dat','r'))
-    set6 = set(pfx2proxy_default.keys())
-    set7 = set.intersection(set5, set6)
-    print "# of prefixes which can benefit from new peerings", len(set7)
+    #print len(set5)
+    #pfx2proxy_default = json.load(open('pfx2proxy_default.dat','r'))
+    #set6 = set(pfx2proxy_default.keys())
+    #set7 = set.intersection(set5, set6)
+    #print "# of prefixes which can benefit from new peerings", len(set7)
+    """
+    pfx2ispfe = json.load(open('pfx2ispfe.dat', 'r'))
+    pfx2ispfe = remove_prefixs_asn(pfx2ispfe)
+    pfx2gfe = json.load(open('pfx2gfe.dat', 'r'))
+    pfx2gfe = remove_prefixs_asn(pfx2gfe)
+
+    """
+    pfx2proxy_filtered = {}
+    for prefix in list(set5):
+        distance1 = 10*distanceThreshold
+        distance2 = 10*distanceThreshold
+        if prefix in pfx2gfe:
+            distance1 = int(pfx2gfe[prefix])
+        if prefix in pfx2ispfe:
+            distance2 = int(pfx2ispfe[prefix])
+        distance_default = min([distance1, distance2])
+        if distance_default == 10*distanceThreshold:
+            distance_default = -1
+        pfx2proxy_filtered[prefix] = pfx2proxy_nearest[prefix]
+        pfx2proxy_filtered[prefix].append(distance_default)
+    print "Updated the pfx2proxy result for filteredt prefix, # = ",len(pfx2proxy_filtered.keys())
+    with open('pfx2proxy_filtered.dat', 'w') as outfile:
+            json.dump(pfx2proxy_filtered, outfile, ensure_ascii=True, encoding="ascii")
+    """
+
+    list1 = []
+    list2 = []
+    for prefix in pfx2gfe:
+        distance1 = int(pfx2gfe[prefix])
+        if distance1 <= distanceThreshold:
+            list1.append(prefix)
+    for prefix in pfx2ispfe:
+        distance2 = int(pfx2ispfe[prefix])
+        if distance2 <= distanceThreshold:
+            list2.append(prefix)
+    print len(set(list2)), len(set(list1))
+    set8 = set.union(set(list1),set(list2))
+    print len(set8)
+    #set9 = set4-set8
+    #print "Difference # of prefixes which can benefit from new peerings", len(set9)
+    set10 = set.intersection(set3, set8)
+    print "total edgecast: ", len(set3), " benefited: ", len(set10), "not benefited", len(set3)-len(set10)
+    set11 = (set(list2)-set(list1))
+    print len(set11)
+    set12 = set.intersection(set11, set3)
+    print len(set12)
+
 
 
 def simulate_sdx():
