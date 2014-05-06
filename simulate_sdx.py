@@ -701,10 +701,18 @@ def compare_edgecast_allprefixes():
     set2 = set(pfx2location.keys())
     set3 = set.intersection(set1, set2)
     print len(set3)
-    """
-
     pfx2proxy_nearest = json.load(open(pfx2proxy_nearestFile,'r'))
     pfx2proxy_nearest = remove_prefixs_asn(pfx2proxy_nearest)
+
+    pfx2requests_filtered = {}
+    for prefix in list(set3):
+        pfx2requests_filtered[prefix] = pfx2requests[prefix]
+
+    with open('pfx2requests_filtered.dat', 'w') as outfile:
+        json.dump(pfx2requests_filtered, outfile, ensure_ascii=True, encoding="ascii")
+
+    print len(pfx2requests_filtered.keys())
+    """
     set4 = set(pfx2proxy_nearest.keys())
     #set5 = set.intersection(set3, set4)
     print "# of prefixes near IXPs with location data: ", len(set4)
@@ -713,13 +721,13 @@ def compare_edgecast_allprefixes():
     #set6 = set(pfx2proxy_default.keys())
     #set7 = set.intersection(set5, set6)
     #print "# of prefixes which can benefit from new peerings", len(set7)
-    """
+
     pfx2ispfe = json.load(open('pfx2ispfe.dat', 'r'))
     pfx2ispfe = remove_prefixs_asn(pfx2ispfe)
     pfx2gfe = json.load(open('pfx2gfe.dat', 'r'))
     pfx2gfe = remove_prefixs_asn(pfx2gfe)
 
-    """
+
     pfx2proxy_filtered = {}
     for prefix in list(set5):
         distance1 = 10*distanceThreshold
@@ -736,7 +744,7 @@ def compare_edgecast_allprefixes():
     print "Updated the pfx2proxy result for filteredt prefix, # = ",len(pfx2proxy_filtered.keys())
     with open('pfx2proxy_filtered.dat', 'w') as outfile:
             json.dump(pfx2proxy_filtered, outfile, ensure_ascii=True, encoding="ascii")
-    """
+
 
     list1 = []
     list2 = []
@@ -759,7 +767,49 @@ def compare_edgecast_allprefixes():
     print len(set11)
     set12 = set.intersection(set11, set3)
     print len(set12)
+    """
 
+def get_pfx2proxy_redirected():
+    pfx2proxy_redirected = {}
+    with open('prefixes-default.txt') as f:
+        for line in f:
+            chunks = line.strip().split(' ')
+            if len(chunks) == 4:
+                #print chunks
+                pfx2proxy_redirected[chunks[0]] = int(float(chunks[3]))
+
+    with open('pfx2proxy_redirected.dat', 'w') as outfile:
+        json.dump(pfx2proxy_redirected, outfile, ensure_ascii=True, encoding="ascii")
+
+
+def get_pfx2proxy_triplet():
+    pfx2proxy_nearest = json.load(open(pfx2proxy_nearestFile,'r'))
+    pfx2proxy_nearest = remove_prefixs_asn(pfx2proxy_nearest)
+    pfx2proxy_redirected = json.load(open('pfx2proxy_redirected.dat','r'))
+    pfx2requests_filtered = json.load(open('pfx2requests_filtered.dat','r'))
+
+    print "loaded all the required data structures, # pfx2requests_filtered ", len(pfx2requests_filtered.keys())
+    pfx2proxy_triplet = {}
+    for prefix in pfx2requests_filtered:
+        # We'll have distance triplet for all the edgecast prefixes with location data.
+        distance_triplet = [-1, -1]
+        if prefix in pfx2proxy_nearest:
+
+            distance_triplet = pfx2proxy_nearest[prefix]
+            #print distance_triplet
+        #else:
+        #    distance_dual = [-1,-1]
+        if prefix in pfx2proxy_redirected:
+
+            redirected_distance = int(pfx2proxy_redirected[prefix])
+            distance_triplet.append(redirected_distance)
+            #print distance_triplet
+            pfx2proxy_triplet[prefix] = distance_triplet
+
+    print "dumping the data len: ", len(pfx2proxy_triplet.keys())
+
+    with open('pfx2proxy_triplet.dat','w') as outfile:
+        json.dump(pfx2proxy_triplet, outfile, ensure_ascii=True, encoding="ascii")
 
 
 def simulate_sdx():
@@ -775,11 +825,11 @@ def simulate_sdx():
     #get_pfx2ispfe()
     #get_pfx2proxy_default()
     #merge_edgecast_allprefixes()
-    compare_edgecast_allprefixes()
+    #compare_edgecast_allprefixes()
     #pfx2proxy_default = json.load(open('pfx2proxy_default.dat','r'))
     #print len(pfx2proxy_default.keys())
-
-
+    #get_pfx2proxy_redirected()
+    get_pfx2proxy_triplet()
 
 
 if __name__ == '__main__':
