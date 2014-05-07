@@ -789,7 +789,7 @@ def get_pfx2proxy_asn():
             chunks = line.strip().split(' ')
             if len(chunks) == 4:
                 pfx2proxy_asn[chunks[0]] = int(float(chunks[2]))
-                
+
     with open('pfx2proxy_asn.dat', 'w') as outfile:
         json.dump(pfx2proxy_asn, outfile, ensure_ascii=True, encoding="ascii")
 
@@ -830,17 +830,17 @@ def convert_prefixes_to_requests(closest_to_proxy_prefixes, pfx2distance_improve
     query_distance_improvements = []
     pfx2requests_filtered = json.load(open('pfx2requests_filtered.dat','r'))
     for k, v in closest_to_proxy_prefixes.iteritems():
-        
+
         for prefix in v:
             nqueries = int(pfx2requests_filtered[prefix])
-            if prefix in pfx2requests_filtered:
+            if prefix in pfx2distance_improvements:
                 for ind in range(nqueries):
                     query_distance_improvements.append(pfx2distance_improvements[prefix])
             closest_to_proxy_queries[k] += nqueries
             total_queries += nqueries
-            
+
     return closest_to_proxy_queries, total_queries, query_distance_improvements
-            
+
 
 def plot_cdf(input_data, legends, labels, figname, limits):
     data = input_data
@@ -852,7 +852,7 @@ def plot_cdf(input_data, legends, labels, figname, limits):
     linestyles=[ '--',':','-','-.']
     #pl.rc('text', usetex=True)
     #pl.rc('font', family='serif')
-    
+
     i =0
     plots = []
     for elem in data:
@@ -865,11 +865,11 @@ def plot_cdf(input_data, legends, labels, figname, limits):
     if len(legends) > 0:
         plots = [x[0] for x in plots]
         pl.legend((plots),legends,'lower right')
-    
+
     #pl.xlabel(labels[0])
     pl.ylabel('P(Distance <= x)')
     pl.xlabel(labels[0])
-    
+
     # Use the limits variable to set the limits
     ax.set_ylim(ymin=0.01)
     ax.set_xlim(xmax = 6000)
@@ -880,32 +880,32 @@ def plot_cdf(input_data, legends, labels, figname, limits):
     plot_name_png = figname+'.png'
     pl.savefig(plot_name)
     pl.savefig(plot_name_png)
-       
-    
+
+
 
 def analyze_pfx2proxy_triplet():
     pfx2proxy_triplet = json.load(open('pfx2proxy_triplet.dat','r'))
-    
+
     print "loaded the required data structures"
     total =  len(pfx2proxy_triplet.keys())
     print "Total edgecast prefixes considered: ", total
-    
+
     closest_to_proxy = {0: 0, 1: 0, 2: 0}
-    closest_to_proxy_prefixes = {0: [], 1: [], 2: []}    
+    closest_to_proxy_prefixes = {0: [], 1: [], 2: []}
     improvement_distance = []
     distance_distribution_improvement = {0: [], 1: [], 2: []}
     distance_distribution_merged = {0: [], 1: []}
     pfx2distance_improvements = {}
-    
-    
+
+
     analyzed_data = {}
-    
+
     for k, v in pfx2proxy_triplet.iteritems():
-        
+
         v = [(100*distanceThreshold) if x == -1 else x for x in v]
         # Since it returns the first value, we bias in favor of Open peering.
         # This is ok if v[0] != v[2]
-        
+
         min_index = v.index(min(v))
         if (min_index < 2) and (v[min_index] == v[2]):
             closest_to_proxy[2] +=1
@@ -914,11 +914,11 @@ def analyze_pfx2proxy_triplet():
             """ This is the case when links at IXPs can bring client closer to FEs"""
             closest_to_proxy[min_index] +=1
             closest_to_proxy_prefixes[min_index].append(k)
-            
+
         if min_index < 2:
             if v[2] != 100*distanceThreshold:
                 diff = v[2] - v[min_index]
-                
+
                 if diff > 0 and diff < 10000:
                     distance_distribution_merged[0].append(v[min_index])
                     distance_distribution_merged[1].append(v[2])
@@ -930,64 +930,65 @@ def analyze_pfx2proxy_triplet():
                             if elem < 10000:
                                 distance_distribution_improvement[ind].append(int(elem))
                         ind +=1
-    
+
     print "plot distances cdf"
-    legends = ['Existing Peering Links', 'Additional Peering Links', 'Redirected'] 
+    legends = ['Existing Peering Links', 'Additional Peering Links', 'Redirected']
     input_data = distance_distribution_improvement.values()
     figname = "peering_links_improvements_distances"
-    labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}'] 
+    labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}']
     limits = {'x':[-1,6000], 'y':[0.01,-1]}
-    plot_cdf(input_data, legends, labels, figname, limits) 
-    
-    legends = [] 
+    plot_cdf(input_data, legends, labels, figname, limits)
+
+    legends = []
     input_data = [improvement_distance]
     figname = "peering_links_distance_closer"
-    labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}'] 
+    labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}']
     limits = {'x':[-1,6000], 'y':[0.01,-1]}
-    plot_cdf(input_data, legends, labels, figname, limits)    
-    
-    legends = ['IXP Frontend', 'Redirected Frontend'] 
+    plot_cdf(input_data, legends, labels, figname, limits)
+
+    legends = ['IXP Frontend', 'Redirected Frontend']
     input_data = distance_distribution_merged.values()
     figname = "peering_links_merged_distances"
-    labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}'] 
+    labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}']
     limits = {'x':[-1,6000], 'y':[0.01,-1]}
     plot_cdf(input_data, legends, labels, figname, limits)
-             
-    
+
+
     total, average, median, standard_deviation, minimum, maximum, confidence = stats(improvement_distance)
     print "Frontend gets closer for ", len(improvement_distance), " prefixes"
-    print "Improvements in distance, median: ", median, " maximum: ", maximum  
-        
-    print "Distribution of closest path to frontend" 
+    print "Improvements in distance, median: ", median, " maximum: ", maximum
+
+    print "Distribution of closest path to frontend"
     print "# Prefixes -- redirected: ", closest_to_proxy[2], " open: ", closest_to_proxy[0], " SDX: ", closest_to_proxy[1]
-    
+
     print len(distance_distribution_improvement[0]), len(distance_distribution_improvement[1]), len(distance_distribution_improvement[2])
-     
+
     print " Calling prefix to query converter"
-    closest_to_proxy_queries, total_queries, query_distance_improvements = convert_prefixes_to_requests(closest_to_proxy_prefixes, pfx2distance_improvements) 
+    closest_to_proxy_queries, total_queries, query_distance_improvements = convert_prefixes_to_requests(closest_to_proxy_prefixes, pfx2distance_improvements)
     print " Total queries considered: ", total_queries
     print "# Queries -- redirected: ", closest_to_proxy_queries[2], " open: ", closest_to_proxy_queries[0], " SDX: ", closest_to_proxy_queries[1]
-    
-    legends = [] 
+
+    legends = []
     input_data = [query_distance_improvements]
     figname = "peering_links_distance_closer_queries"
-    labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}'] 
+    labels = ['Distance (km)', r'\textbf{P(Distance \leq) x}']
     limits = {'x':[-1,6000], 'y':[0.01,-1]}
     plot_cdf(input_data, legends, labels, figname, limits)
-    
-    
+
+
     analyzed_data['closest_to_proxy'] = closest_to_proxy
     analyzed_data['closest_to_proxy_prefixes'] = closest_to_proxy_prefixes
     analyzed_data['improvement_distance'] = improvement_distance
     analyzed_data['distance_distribution_improvement'] = distance_distribution_improvement
     analyzed_data['distance_distribution_merged'] = distance_distribution_merged
-    
+    analyzed_data['query_distance_improvements'] = query_distance_improvements
+
     with open('analyzed_data.dat','w') as outfile:
         json.dump(analyzed_data, outfile, ensure_ascii=True, encoding="ascii")
-    
 
-def stats_from_analyzed_data():  
-    analyzed_data = json.load(open('analyzed_data.dat','r')) 
+
+def stats_from_analyzed_data():
+    analyzed_data = json.load(open('analyzed_data.dat','r'))
     pfx2proxy_asn = json.load(open('pfx2proxy_asn.dat','r'))
     on_net = 0
     off_net = 0
@@ -1001,7 +1002,7 @@ def stats_from_analyzed_data():
                 else:
                     off_net += 1
     print "Out of the prefixes getting benefitted with IXPs, on_net: ", on_net, "off_net: ", off_net
-    
+
 
 def simulate_sdx():
     #get_ixp2proxy()
@@ -1024,7 +1025,7 @@ def simulate_sdx():
     #get_pfx2proxy_asn()
     analyze_pfx2proxy_triplet()
     #stats_from_analyzed_data()
-    
+
 
 
 if __name__ == '__main__':
